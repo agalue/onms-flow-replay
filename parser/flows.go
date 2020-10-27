@@ -79,8 +79,7 @@ func (p *FlowParser) Publish(msgs []*goflowMsg.FlowMessage) {
 		messages[idx] = buffer
 	}
 	if p.UseSink {
-		data := p.wrapMessageToTelemetry(messages)
-		p.sendBytes(data)
+		p.sendSinkMessage(messages)
 	} else {
 		for _, m := range messages {
 			if err := p.publisher.Publish(p.KafkaTopic, message.NewMessage(watermill.NewUUID(), m)); err != nil {
@@ -248,14 +247,14 @@ func (p *FlowParser) wrapMessageToTelemetry(data [][]byte) []byte {
 	return bytes
 }
 
-func (p *FlowParser) sendBytes(bytes []byte) {
+func (p *FlowParser) sendSinkMessage(messages [][]byte) {
+	bytes := p.wrapMessageToTelemetry(messages)
 	id := watermill.NewUUID()
-	var current, total int32 = 1, 1
+	var total int32 = 1
 	msg := &sink.SinkMessage{
-		MessageId:          &id,
-		CurrentChunkNumber: &current,
-		TotalChunks:        &total,
-		Content:            bytes,
+		MessageId:   &id,
+		TotalChunks: &total,
+		Content:     bytes,
 	}
 	bytes, err := proto.Marshal(msg)
 	if err != nil {
